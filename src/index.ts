@@ -15,98 +15,25 @@ const agent = new Agent({
 
 // Define environment variables
 const TELEGRAM_WEBHOOK = process.env.TELEGRAM_WEBHOOK
-const WORKSPACE_ID = process.env.WORKSPACE_ID
-const TWITTER_INTEGRATION_ID = process.env.TWITTER_INTEGRATION_ID
 let chatId: null = null // Variable to store the chatId for sending Telegram messages
 
-if (!TELEGRAM_WEBHOOK || !WORKSPACE_ID || !TWITTER_INTEGRATION_ID) {
+if (!TELEGRAM_WEBHOOK) {
   throw new Error(
     'Missing environment variables: TELEGRAM_WEBHOOK, WORKSPACE_ID or TWITTER_INTEGRATION_ID.'
   )
 }
 
-// Initialize the NLP tokenizer
-const tokenizer = new natural.WordTokenizer()
-
-// Define positive and negative words for sentiment analysis
-const positiveWords = ['good', 'great', 'positive', 'bullish', 'up']
-const negativeWords = ['bad', 'terrible', 'negative', 'bearish', 'down']
-
-// Function to fetch the last hour's tweets about Bitcoin
-async function fetchRecentBitcoinTweets() {
-  const currentTime = new Date()
-  const oneHourAgo = new Date(currentTime.getTime() - 60 * 60 * 1000)
-  const formattedTime = oneHourAgo.toISOString()
-
-  try {
-    const response = await agent.callIntegration({
-      workspaceId: WORKSPACE_ID,
-      integrationId: 'twitter-v2',
-      details: {
-        endpoint: '/2/tweets/search/recent',
-        method: 'GET',
-        params: {
-          query: 'bitcoin',
-          start_time: formattedTime,
-          tweet_fields: 'created_at,text'
-        }
-      }
-    })
-
-    return response.data.data || []
-  } catch (error) {
-    console.error('Error fetching tweets:', error)
-    throw new Error('Failed to fetch recent Bitcoin tweets.')
-  }
-}
-
-const Sentiment = require('sentiment')
-const sentiment = new Sentiment()
-
-function analyzeSentiment(text) {
-  const result = sentiment.analyze(text)
-  return result.score
-}
-
-// Add a new capability to the agent for sentiment analysis
 agent.addCapability({
   name: 'bitcoin_sentiment_analysis',
   description:
     'Fetches recent Bitcoin tweets from the last hour and performs sentiment analysis on them.',
   schema: z.object({}),
-  async run({ args }): Promise<string> {
+  async run({ args, action }): Promise<string> {
     try {
       // Fetch the last hour's tweets about Bitcoin
-      const tweets = await fetchRecentBitcoinTweets()
+      const tweets = await fetchRecentBitcoinTweets(action?.workspace.id)
 
-      if (tweets.length === 0) {
-        return 'No recent Bitcoin tweets found.'
-      }
-
-      // Analyze sentiment for all the tweets
-      let totalSentimentScore = 0
-      tweets.forEach(tweet => {
-        const sentimentScore = analyzeSentiment(tweet.text)
-        totalSentimentScore += sentimentScore
-      })
-
-      const averageSentimentScore = tweets.length ? totalSentimentScore / tweets.length : 0
-
-      let sentiment
-      if (averageSentimentScore > 0.5) {
-        sentiment = '🚀 Strongly Positive'
-      } else if (averageSentimentScore > 0.2) {
-        sentiment = '📈 Positive'
-      } else if (averageSentimentScore < -0.5) {
-        sentiment = '⚠️ Strongly Negative'
-      } else if (averageSentimentScore < -0.2) {
-        sentiment = '📉 Negative'
-      } else {
-        sentiment = '📊 Neutral'
-      }
-
-      const message = `Bitcoin Sentiment (Last Hour): ${sentiment} (Score: ${averageSentimentScore.toFixed(2)})`
-
+      const message = await analyzeAndCategorizeSentiment(tweets)
       // Send sentiment result to Telegram bot via webhook
       if (chatId) {
         await axios.post(TELEGRAM_WEBHOOK, { chat_id: chatId, text: message })
@@ -119,6 +46,104 @@ agent.addCapability({
     }
   }
 })
+
+async function analyzeAndCategorizeSentiment(tweets) {
+  let totalSentimentScore = 0
+  let positiveCount = 0
+  let neutralCount = 0
+  let negativeCount = 0
+
+  tweets.forEach(tweet => {
+    const sentimentScore = analyzeSentiment(tweet.text)
+    totalSentimentScore += sentimentScore
+
+    // Categorize sentiment based on the score
+    if (sentimentScore > 0.5) {
+      positiveCount++
+    } else if (sentimentScore > 0.2) {
+      neutralCount++
+    } else if (sentimentScore < -0.5) {
+      negativeCount++
+    } else if (sentimentScore < -0.2) {
+      neutralCount++
+    }
+  })
+
+  // Calculate the average sentiment score
+  const averageSentimentScore = tweets.length ? totalSentimentScore / tweets.length : 0
+
+  // Determine the overall sentiment
+  let sentiment
+  if (averageSentimentScore > 0.5) {
+    sentiment = '🚀 Strongly Positive'
+  } else if (averageSentimentScore > 0.2) {
+    sentiment = '📈 Positive'
+  } else if (averageSentimentScore < -0.5) {
+    sentiment = '⚠️ Strongly Negative'
+  } else if (averageSentimentScore < -0.2) {
+    sentiment = '📉 Negative'
+  } else {
+    sentiment = '📊 Neutral'
+  }
+
+  // Calculate percentages for each category
+  const totalTweets = tweets.length
+  const positivePercentage = totalTweets ? ((positiveCount / totalTweets) * 100).toFixed(2) : 0
+  const neutralPercentage = totalTweets ? ((neutralCount / totalTweets) * 100).toFixed(2) : 0
+  const negativePercentage = totalTweets ? ((negativeCount / totalTweets) * 100).toFixed(2) : 0
+
+  // Generate the final report message
+  const message =
+    `Bitcoin Sentiment (Last Hour): ${sentiment} (Score: ${averageSentimentScore.toFixed(2)})\n\n` +
+    `🔍 *Aggregated Sentiment*: \n` +
+    `• Positive: ${positivePercentage}% \n` +
+    `• Neutral: ${neutralPercentage}% \n` +
+    `• Negative: ${negativePercentage}%`
+
+  return message
+}
+
+async function fetchTweetsWithPagination(passed_workspaceId) {
+  let allTweets = []
+  let nextToken = null
+  const currentTime = new Date()
+  const oneHourAgo = new Date(currentTime.getTime() - 60 * 60 * 1000)
+  const formattedTime = oneHourAgo.toISOString()
+  // Keep making requests while there's a nextToken
+  do {
+    const params = {
+      query: 'bitcoin',
+      start_time: formattedTime,
+      tweet_fields: 'created_at,text',
+      max_results: 100 // Max number of tweets per request
+    }
+
+    // Add the next_token to params if it exists
+    if (nextToken) {
+      params.next_token = nextToken
+    }
+
+    // Call the Twitter integration with pagination
+    const response = await agent.callIntegration({
+      workspaceId: passed_workspaceId,
+      integrationId: 'twitter-v2',
+      details: {
+        endpoint: '/2/tweets/search/recent',
+        method: 'GET',
+        params: params
+      }
+    })
+
+    // Add the retrieved tweets to the allTweets array
+    const tweets = response?.output?.data ?? []
+    allTweets = allTweets.concat(tweets)
+
+    // Check if there's a next_token for the next page of results
+    nextToken = response?.output?.meta?.next_token || undefined
+  } while (nextToken) // Continue looping until there's no next_token
+
+  return allTweets
+}
 
 // Webhook to receive chatId from the user (Telegram-specific)
 app.post('/receive-chat-id', (req, res) => {
