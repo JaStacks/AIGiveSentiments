@@ -3,7 +3,7 @@ import axios from 'axios'
 import { Agent } from '@openserv-labs/sdk'
 import { z } from 'zod'
 import 'dotenv/config'
-import natural from 'natural' // Importing the natural library for NLP
+import { analyzeSentiment } from './sentiment'
 
 const app = express()
 app.use(express.json())
@@ -28,10 +28,10 @@ agent.addCapability({
   description:
     'Fetches recent Bitcoin tweets from the last hour and performs sentiment analysis on them.',
   schema: z.object({}),
-  async run({ args, action }): Promise<string> {
+  async run({ args, action }) {
     try {
       // Fetch the last hour's tweets about Bitcoin
-      const tweets = await fetchRecentBitcoinTweets(action?.workspace.id)
+      const tweets = await fetchTweetsWithPagination(action?.workspace.id)
 
       const message = await analyzeAndCategorizeSentiment(tweets)
       // Send sentiment result to Telegram bot via webhook
@@ -39,7 +39,7 @@ agent.addCapability({
         await axios.post(TELEGRAM_WEBHOOK, { chat_id: chatId, text: message })
       }
 
-      return `Sentiment processed successfully. Result: ${sentiment}`
+      return `Sentiment processed successfully. Result: ${message}`
     } catch (error) {
       console.error('Error processing sentiment:', error)
       throw new Error('Sentiment processing failed.')
@@ -111,16 +111,15 @@ async function fetchTweetsWithPagination(passed_workspaceId) {
   const formattedTime = oneHourAgo.toISOString()
   // Keep making requests while there's a nextToken
   do {
-    const params = {
+    const params: Record<string, any> = {
       query: 'bitcoin',
       start_time: formattedTime,
       tweet_fields: 'created_at,text',
       max_results: 100 // Max number of tweets per request
-    }
+    };
 
-    // Add the next_token to params if it exists
     if (nextToken) {
-      params.next_token = nextToken
+      params.pagination_token = nextToken;
     }
 
     // Call the Twitter integration with pagination
@@ -140,6 +139,7 @@ async function fetchTweetsWithPagination(passed_workspaceId) {
 
     // Check if there's a next_token for the next page of results
     nextToken = response?.output?.meta?.next_token || undefined
+
   } while (nextToken) // Continue looping until there's no next_token
 
   return allTweets
