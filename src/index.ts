@@ -19,7 +19,7 @@ let chatId: null = null // Variable to store the chatId for sending Telegram mes
 
 if (!TELEGRAM_WEBHOOK) {
   throw new Error(
-    'Missing environment variables: TELEGRAM_WEBHOOK, WORKSPACE_ID or TWITTER_INTEGRATION_ID.'
+    'Missing environment variables: TELEGRAM_WEBHOOK'
   )
 }
 
@@ -116,10 +116,10 @@ async function fetchTweetsWithPagination(passed_workspaceId) {
       start_time: formattedTime,
       tweet_fields: 'created_at,text',
       max_results: 100 // Max number of tweets per request
-    };
+    }
 
     if (nextToken) {
-      params.pagination_token = nextToken;
+      params.pagination_token = nextToken
     }
 
     // Call the Twitter integration with pagination
@@ -139,7 +139,6 @@ async function fetchTweetsWithPagination(passed_workspaceId) {
 
     // Check if there's a next_token for the next page of results
     nextToken = response?.output?.meta?.next_token || undefined
-
   } while (nextToken) // Continue looping until there's no next_token
 
   return allTweets
