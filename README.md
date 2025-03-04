@@ -1,149 +1,197 @@
-# Agent Starter
 
-A starter project to help you get started with [OpenServ Labs SDK](https://github.com/openserv-labs/sdk) - a powerful TypeScript framework for building non-deterministic AI agents with advanced cognitive capabilities.
+# Sentiment Analysis Agent 🚀🤖  
 
-This starter provides a minimal setup to help you understand the basics of the SDK. For more advanced features like tasks, file operations, and inter-agent collaboration, check out the [SDK documentation](https://github.com/openserv-labs/sdk).
+<div>
+    <img src="https://readme-typing-svg.demolab.com/?pause=1&size=30&color=f75c7e&center=True&width=1000&height=50&vCenter=True&lines=Click+the+⭐+Star+to+Support+This+Project;Open+Issues+for+Feedback+or+Questions!" />
+</div>  
 
-## Before you start
+---
 
-### 1. Expose your local server
+## Table of Contents 📚  
+- [Features ✨](#features-✨)  
+- [Setup 🛠️](#setup-🛠️)  
+  - [Clone This Repository 📂](#clone-this-repository-📂)  
+  - [Install Dependencies 📦](#install-dependencies-📦)  
+  - [Configure Environment Variables ⚙️](#configure-environment-variables-⚙️)  
+- [Example Usage 📋](#example-usage-📋)  
+- [Development 🔧](#development-🔧)  
+  - [Run the Development Server 🖥️](#run-the-development-server-🖥️)  
+  - [Code Quality 🧹](#code-quality-🧹)  
+  - [Building 🏗️](#building-🏗️)  
+- [Task Workflow 🗂️](#task-workflow-🗂️)  
+- [Advanced Features 💡](#advanced-features-💡)  
+- [Example Report Output 📝](#example-report-output-📝)  
+- [Next Steps 🚀](#next-steps-🚀)  
+- [Resources 📖](#resources-📖)  
 
-To allow OpenServ to access your agent locally, use a tunneling tool like [ngrok](https://ngrok.com/) or [localtunnel](https://github.com/localtunnel/localtunnel):
+---
 
-Example using ngrok:
+## Features ✨  
+### Core Functionalities  
+- 🐦 **Tweet Scraping**: Fetches and filters tweets mentioning specific token tickers for sentiment analysis.  
+- 📊 **Sentiment Analysis**: Analyzes tweet content for positive, neutral, or negative sentiment associated with the token.  
+- 🧠 **Data Aggregation**: Aggregates sentiment scores for a more comprehensive view over time, including analysis across multiple tweets or users.  
+- ✨ **Webhook Integration**: Sends processed sentiment data to other systems or triggers automated actions based on sentiment.  
 
-```bash
-ngrok http 7378  # Replace 7378 with your actual PORT if different
-```
+### Modular Design 🛠️  
+- 🌐 Built with **TypeScript** for type safety and scalability.  
+- ✅ Validates environment variables using **Zod** for reliable configuration.  
+- 🔄 Configured for extensibility to add new capabilities or platforms.  
 
-Copy your tunneling tool URL (e.g., `https://your-name.ngrok-free.app`)
+---
 
-A tunneling is a software utility that exposes a local server on your machine to the internet through a secure public URL, making it useful for testing webhooks, APIs, or services in a local development environment.
+## Setup 🛠️  
 
+### Clone This Repository 📂  
+```bash  
+git clone <repository-url>  
+cd <repository-folder>  
+```  
 
-### 2. Create an account on OpenServ
+### Install Dependencies 📦  
+```bash  
+npm install  
+```  
 
-1. Create a developer account on [OpenServ](https://platform.openserv.ai)
+### Configure Environment Variables ⚙️  
+1. Copy `.env.example` to `.env`:  
+   ```bash  
+   cp .env.example .env  
+   ```  
+2. Update the `.env` file with your environment variables:  
+   ```makefile  
+   API_KEY=<Your API Key>  
+   TWITTER_BEARER_TOKEN=<Your Twitter Bearer Token>  
+   ```  
 
-### 2. Create an agent on OpenServ
+---
 
-1. Create an agent: Developer -> Add Agent --> Add: Agent Name and Capabilities Description
+## Example Usage 📋  
+The agent processes user commands to analyze the sentiment of tweets mentioning specific tokens. For instance:  
 
-Agent Name: `My first AI Agent Test`
-Capabilities Description: `I perform basic arithmetic operations`
+### Example Command  
+```bash  
+/sentiment analysis $TOKEN  
+```  
 
-2. Add Endpoint URL: set the agent's endpoint URL to your tunnelling URL (e.g. ngrok) --> Save
-3. Create an API key: Manage this agent --> Create secret key --> Copy secret key
+### What Happens:  
+1. 🐦 **Fetch Tweets**: Scrapes tweets mentioning the specified token.  
+2. 🧠 **Sentiment Analysis**: Analyzes the sentiment of the fetched tweets.  
+3. 📊 **Aggregate Sentiment**: Aggregates sentiment data over the selected time period or number of tweets.  
+4. ✨ **Webhook Integration**: Sends the results to a configured webhook or triggers automated actions based on the sentiment.  
 
-### 3. Create an OpenAI API key
+---
 
-1. Create an account on [OpenAI](https://platform.openai.com/)
-2. Create an API key: API keys --> Create new secret key --> Copy key
+## Development 🔧  
 
-## Setup
+### Run the Development Server 🖥️  
+The project uses **ts-node-dev** for hot reloading during development:  
+```bash  
+npm run dev  
+```  
 
-1. Clone this repository
-```bash
-git clone https://github.com/openserv-labs/agent-starter.git
-cd agent-starter
-```
+### Code Quality 🧹  
+- **Linting**:  
+  ```bash  
+  # Check for linting issues  
+  npm run lint  
 
-2. Install dependencies:
+  # Automatically fix linting issues  
+  npm run lint:fix  
+  ```  
+- **Formatting**:  
+  ```bash  
+  # Format the codebase  
+  npm run format  
+  ```  
 
-```bash
-npm install
-```
+### Building 🏗️  
+- **Build the Project**:  
+  ```bash  
+  npm run build  
+  ```  
+- **Run the Built Version**:  
+  ```bash  
+  npm start  
+  ```  
 
-3. Copy `.env.example` to `.env` and fill in your configuration:
+---
 
-```bash
-cp .env.example .env
-```
+## Task Workflow 🗂️  
+The agent operates through a **sequential task workflow** to ensure efficient and accurate processing:  
 
-4. Update the environment variables in `.env`:
-   - `OPENSERV_API_KEY`: Your OpenServ API key
-   - `PORT`: The port number for your agent's HTTP server (default: 7378)
-   - `OPENAI_API_KEY`: Your OpenAI API key
+1. **Fetch Tweets** 🐦:  
+   - **Task Name**: `fetchTweets`  
+   - **Description**: Retrieves tweets mentioning the specified token.  
+   - **Output**: A JSON file containing the fetched tweets (`token_tweets_<taskDetails>.json`).  
 
-## Using with OpenServ Platform
+2. **Perform Sentiment Analysis** 🧠:  
+   - **Task Name**: `analyzeSentiment`  
+   - **Description**: Analyzes the sentiment of the tweets and categorizes them as positive, neutral, or negative.  
+   - **Output**: A JSON file with sentiment scores (`token_sentiment_<taskDetails>.json`).  
 
-1. Start your agent locally using `npm run dev` or `npm start`
-2. Your agent is now ready to use on the platform!
+3. **Aggregate Sentiment** 📊:  
+   - **Task Name**: `aggregateSentiment`  
+   - **Description**: Aggregates sentiment scores to provide a more comprehensive view of sentiment trends.  
+   - **Output**: A JSON file with aggregated sentiment data (`token_aggregated_sentiment_<taskDetails>.json`).  
 
-## Example Agent
+4. **Send Results** ✨:  
+   - **Task Name**: `sendResults`  
+   - **Description**: Sends the sentiment results to a specified webhook or triggers automated actions based on the sentiment.  
+   - **Output**: Confirmation of the action or webhook delivery.  
 
-This agent-starter includes a simple example agent that can perform basic arithmetic:
+---
 
-```typescript
-// Example usage
-const response = await agent.process({
-  messages: [
-    {
-      role: 'user',
-      content: 'add 13 and 29'
-    }
-  ]
-})
-```
+## Advanced Features 💡  
+1. **Webhook Integration** ✨:  
+   - Sends sentiment analysis results to other platforms via webhooks.  
+   - Can trigger automated responses based on sentiment thresholds.  
 
-## Development
+2. **Custom Time Period Analysis** ⏳:  
+   - Allows sentiment analysis over a custom time period (e.g., last 24 hours, last 7 days).  
 
-Run the development server with hot reload:
+3. **Aggregated Sentiment Over Time** 📊:  
+   - Tracks sentiment trends over time, offering a historical perspective on how a token's sentiment evolves.  
 
-```bash
-npm run dev
-```
+---
 
-## How to test the agent on OpenServ Platform
+## Example Report Output 📝  
+Here’s a sample **sentiment analysis report** for a token:
 
-1. Go to the OpenServ Platform
-2. Create a new Project: Projects -> Create a new project
-3. Add Project Name and Project Goal and Instructions
-4. Add Agent: Search for your agent name and add it to the project
-5. Run the project
-6. Verify if the agent response is equivalent to what you expect
+```plaintext  
+*cloudyheart (cloudy)* 📊  
 
-## Code Quality
+*Recent Tweets*:  
+1. "I'm bullish on $CLOUDY, this token is looking strong!"  
+   Sentiment: Positive  
+2. "$CLOUDY token dump and rebuy happening now!"  
+   Sentiment: Negative  
 
-The project uses ESLint and Prettier for code quality and formatting:
+🔍 *Aggregated Sentiment*:  
+• Positive: 70%  
+• Neutral: 20%  
+• Negative: 10%  
 
-```bash
-# Run ESLint
-npm run lint
+📈 *Sentiment Trend (Last 24 hours)*:  
+• Positive: 75%  
+• Neutral: 15%  
+• Negative: 10%  
+```  
 
-# Fix ESLint issues
-npm run lint:fix
+---
 
-# Format code with Prettier
-npm run format
-```
+## Next Steps 🚀  
+To expand the functionality of this agent, consider:  
+- Adding support for additional data sources or sentiment analysis models.  
+- Implementing **multi-platform support** for sentiment analysis (e.g., Reddit, Discord).  
+- Adding **real-time monitoring** for sentiment analysis of new tweets as they are posted.  
 
-## Building
+---
 
-Build the project:
+## Resources 📖  
+- **[Twitter API Documentation](https://developer.twitter.com/en/docs)**: Retrieve tweets and user data.  
+- **[Sentiment Analysis Libraries](https://github.com/topics/sentiment-analysis)**: Explore various sentiment analysis tools and libraries.  
 
-```bash
-npm run build
-```
+---
 
-Run the built version:
-
-```bash
-npm start
-```
-
-## Notes
-
-- The project is set up with TypeScript, ts-node-dev for development, and includes VS Code debugging configuration
-- Environment variables are validated using Zod
-- ESLint and Prettier are configured for consistent code style
-- The agent uses natural language processing to understand and execute commands
-
-## Next Steps
-
-Once you're comfortable with the basics, explore more advanced features in the [OpenServ Labs SDK](https://github.com/openserv-labs/sdk):
-- Tasks and workflows
-- Chat interactions
-- File operations
-- Custom capabilities
-- Inter-agent collaboration
+Feel free to contribute or provide feedback by opening issues! 🌟
