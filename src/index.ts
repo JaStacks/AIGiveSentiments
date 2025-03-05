@@ -24,7 +24,7 @@ if (!TELEGRAM_WEBHOOK) {
 agent.addCapability({
   name: 'bitcoin_sentiment_analysis',
   description:
-    'Fetches recent Bitcoin tweets from the last hour and performs sentiment analysis on them.',
+    'Fetches recent Bitcoin tweets from the last hour and performs sentiment analysis, expected output: Sentiment scores and sentiment analysis based on them',
   schema: z.object({}),
   async run({ args, action }) {
     try {
@@ -58,7 +58,7 @@ interface Tweet {
 async function analyzeAndCategorizeSentiment(tweets: Tweet[]): Promise<string> {
   const normalizeSentimentScore = (score: number): number => {
     return ((score + 5) / 10) * 100;
-  }
+  };
   
   let totalSentimentScore: number = 0;
   let positiveCount = 0;
@@ -73,18 +73,21 @@ async function analyzeAndCategorizeSentiment(tweets: Tweet[]): Promise<string> {
     totalSentimentScore += normalizedScore;
   
     // Categorize sentiment based on the normalized score
-    if (normalizedScore > 70) {  // Positive sentiment
+    if (normalizedScore > 60) {  // Positive sentiment
       positiveCount++;
-    } else if (normalizedScore > 30) {  // Neutral sentiment
+    } else if (normalizedScore >= 40) {  // Neutral sentiment
       neutralCount++;
-    } else if (normalizedScore < 30) {  // Negative sentiment
+    } else {  // Negative sentiment
       negativeCount++;
     }
-  
   });
   
-  // Calculate the average sentiment score
-  const averageSentimentScore: number = tweets.length ? totalSentimentScore / tweets.length : 0;
+  // Calculate weighted aggregated sentiment score
+  const aggregatedSentimentScore = 
+    (positiveCount * 100 + neutralCount * 50 + negativeCount * 0) / tweets.length;
+  
+  // Calculate the average sentiment score (optional: consider weighted average)
+  const averageSentimentScore = tweets.length ? totalSentimentScore / tweets.length : 0;
   
   // Calculate percentages for each category
   const totalTweets: number = tweets.length;
@@ -101,12 +104,13 @@ async function analyzeAndCategorizeSentiment(tweets: Tweet[]): Promise<string> {
   // Generate the final report message
   const message: string =
     `Bitcoin Sentiment (Last Hour): ${averageSentimentScore.toFixed(2)}%\n\n` +
-    `🔍 *Aggregated Sentiment*: \n` +
+    `🔍 *Aggregated Sentiment*: ${aggregatedSentimentScore.toFixed(2)}%\n` +
     `• Positive: ${positivePercentage}% \n` +
     `• Neutral: ${neutralPercentage}% \n` +
     `• Negative: ${negativePercentage}%`;
   
   return message;
+  
   
 }
 
