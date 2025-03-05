@@ -22,6 +22,7 @@
   "dependencies": {
     "@jest/globals": "^29.7.0",
     "@openserv-labs/sdk": "^1.1.0",
+    "axios": "^1.8.1",
     "dotenv": "^16.4.5",
     "natural": "^8.0.1",
     "sentiment": "^5.0.2",
