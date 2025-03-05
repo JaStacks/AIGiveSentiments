@@ -18,9 +18,7 @@ const TELEGRAM_WEBHOOK = process.env.TELEGRAM_WEBHOOK
 let chatId: null = null // Variable to store the chatId for sending Telegram messages
 
 if (!TELEGRAM_WEBHOOK) {
-  throw new Error(
-    'Missing environment variables: TELEGRAM_WEBHOOK'
-  )
+  throw new Error('Missing environment variables: TELEGRAM_WEBHOOK')
 }
 
 agent.addCapability({
@@ -31,11 +29,13 @@ agent.addCapability({
   async run({ args, action }) {
     try {
       // Fetch the last hour's tweets about Bitcoin
-      const workspaceId = action?.workspace.id;
-      if (typeof workspaceId !== 'string') {
-        throw new Error('Invalid workspace ID');
+      const workspaceId = action?.workspace.id?.toString()
+
+      if (!workspaceId) {
+        throw new Error('Workspace ID is missing or invalid.')
       }
-      const tweets = await fetchTweetsWithPagination(workspaceId);
+
+      const tweets = await fetchTweetsWithPagination(workspaceId)
 
       const message = await analyzeAndCategorizeSentiment(tweets)
       // Send sentiment result to Telegram bot via webhook
@@ -52,106 +52,105 @@ agent.addCapability({
 })
 
 interface Tweet {
-  text: string;
-}
-
-interface SentimentAnalysisResult {
-  sentiment: string;
-  averageSentimentScore: number;
-  positivePercentage: string;
-  neutralPercentage: string;
-  negativePercentage: string;
-  message: string;
+  text: string
 }
 
 async function analyzeAndCategorizeSentiment(tweets: Tweet[]): Promise<string> {
-  let totalSentimentScore = 0;
+  const normalizeSentimentScore = (score: number): number => {
+    return ((score + 5) / 10) * 100;
+  }
+  
+  let totalSentimentScore: number = 0;
   let positiveCount = 0;
   let neutralCount = 0;
   let negativeCount = 0;
-
-  tweets.forEach((tweet: Tweet) => {
+  
+  tweets.forEach(tweet => {
     const sentimentScore: number = analyzeSentiment(tweet.text);
-    totalSentimentScore += sentimentScore;
-
-    // Categorize sentiment based on the score
-    if (sentimentScore > 0.5) {
+  
+    // Normalize sentiment score to a percentage (0-100%)
+    const normalizedScore = normalizeSentimentScore(sentimentScore);
+    totalSentimentScore += normalizedScore;
+  
+    // Categorize sentiment based on the normalized score
+    if (normalizedScore > 70) {  // Positive sentiment
       positiveCount++;
-    } else if (sentimentScore > 0.2) {
+    } else if (normalizedScore > 30) {  // Neutral sentiment
       neutralCount++;
-    } else if (sentimentScore < -0.5) {
+    } else if (normalizedScore < 30) {  // Negative sentiment
       negativeCount++;
-    } else if (sentimentScore < -0.2) {
-      neutralCount++;
     }
+  
   });
-
+  
   // Calculate the average sentiment score
   const averageSentimentScore: number = tweets.length ? totalSentimentScore / tweets.length : 0;
-
-  // Determine the overall sentiment
-  let sentiment: string;
-  if (averageSentimentScore > 0.5) {
-    sentiment = '🚀 Strongly Positive';
-  } else if (averageSentimentScore > 0.2) {
-    sentiment = '📈 Positive';
-  } else if (averageSentimentScore < -0.5) {
-    sentiment = '⚠️ Strongly Negative';
-  } else if (averageSentimentScore < -0.2) {
-    sentiment = '📉 Negative';
-  } else {
-    sentiment = '📊 Neutral';
-  }
-
+  
   // Calculate percentages for each category
   const totalTweets: number = tweets.length;
-  const positivePercentage: string = totalTweets ? ((positiveCount / totalTweets) * 100).toFixed(2) : '0';
-  const neutralPercentage: string = totalTweets ? ((neutralCount / totalTweets) * 100).toFixed(2) : '0';
-  const negativePercentage: string = totalTweets ? ((negativeCount / totalTweets) * 100).toFixed(2) : '0';
-
+  const positivePercentage: string = totalTweets
+    ? ((positiveCount / totalTweets) * 100).toFixed(2)
+    : '0';
+  const neutralPercentage: string = totalTweets
+    ? ((neutralCount / totalTweets) * 100).toFixed(2)
+    : '0';
+  const negativePercentage: string = totalTweets
+    ? ((negativeCount / totalTweets) * 100).toFixed(2)
+    : '0';
+  
   // Generate the final report message
   const message: string =
-    `Bitcoin Sentiment (Last Hour): ${sentiment} (Score: ${averageSentimentScore.toFixed(2)})\n\n` +
+    `Bitcoin Sentiment (Last Hour): ${averageSentimentScore.toFixed(2)}%\n\n` +
     `🔍 *Aggregated Sentiment*: \n` +
     `• Positive: ${positivePercentage}% \n` +
     `• Neutral: ${neutralPercentage}% \n` +
     `• Negative: ${negativePercentage}%`;
-
+  
   return message;
+  
 }
 
 interface TweetResponse {
-  output: {
-    data: Tweet[];
-    meta: {
-      next_token?: string;
-    };
-  };
+  data: Tweet[]
+  meta: {
+    next_token?: string
+  }
 }
 
-async function fetchTweetsWithPagination(passed_workspaceId: string): Promise<Tweet[]> {
+async function fetchTweetsWithPagination(passed_workspaceId: string) {
   console.log('Fetching tweets...');
   let allTweets: Tweet[] = [];
-  let nextToken: string | undefined = undefined;
+  let nextToken = undefined;
   const currentTime = new Date();
-  const oneHourAgo = new Date(currentTime.getTime() - 60 * 60 * 1000);
+  const oneHourAgo = new Date(currentTime.getTime() - 30 * 60 * 1000);
   const formattedTime = oneHourAgo.toISOString();
 
   try {
     do {
-      const params: Record<string, any> = {
-        query: 'bitcoin (price OR analysis OR update OR bullish OR bearish) lang:en -is:retweet -has:links min_faves:10 min_retweets:5 min_replies:2',
-        start_time: formattedTime,
-        "tweet.fields": "created_at,text,author_id,public_metrics",
+      const params: { 
+        query: string; 
+        start_time: string; 
+        'tweet.fields': string; 
+        expansions: string; 
+        'user.fields': string; 
+        max_results: number; 
+        pagination_token?: string 
+      } = {
+        query: 'bitcoin (price OR analysis OR market OR forecast OR trend) lang:en -is:retweet -has:links -has:cashtags',
+        start_time: formattedTime, // Ensure ISO 8601 format (YYYY-MM-DDTHH:mm:ssZ)
+        'tweet.fields': 'created_at,text,author_id,public_metrics',
+        'expansions': 'author_id',
+        'user.fields': 'username,name,verified',
         max_results: 100
       };
 
       if (nextToken) {
+        console.log('Next token found, using for pagination');
         params.pagination_token = nextToken;
       }
 
-      // Call the Twitter integration with pagination
-      const response: TweetResponse = await agent.callIntegration({
+      // Call the Twitter API
+      const response = await agent.callIntegration({
         workspaceId: Number(passed_workspaceId),
         integrationId: 'twitter-v2',
         details: {
@@ -161,21 +160,55 @@ async function fetchTweetsWithPagination(passed_workspaceId: string): Promise<Tw
         }
       });
 
-      // Add the retrieved tweets to the allTweets array
-      const tweets: Tweet[] = response?.output?.data ?? [];
-      console.log(`Fetched ${tweets.length} tweets...`);
-      allTweets = allTweets.concat(tweets);
+      console.log("🔎 Raw API Response:", JSON.stringify(response.output.data, null, 2));
 
-      // Check if there's a next_token for the next page of results
-      nextToken = response?.output?.meta?.next_token || undefined;
+      // ✅ Check if response contains tweets
+      const tweets = response?.output?.data
+      if (!tweets || tweets.length === 0) {
+        console.log("❌ No tweets found in API response.");
+        return allTweets;
+      }
+
+      console.log(`✅ Found ${tweets.length} tweets.`);
+
+      // ✅ Filter relevant tweets
+      interface PublicMetrics {
+        like_count: number;
+        retweet_count: number;
+        reply_count: number;
+      }
+
+      interface TweetWithMetrics extends Tweet {
+        public_metrics: PublicMetrics;
+      }
+
+      const relevantTweets: TweetWithMetrics[] = tweets.filter((tweet: TweetWithMetrics) => 
+        tweet.public_metrics &&
+        tweet.public_metrics.like_count >= 5 ||
+        tweet.public_metrics.retweet_count >= 5 ||
+        tweet.public_metrics.reply_count >= 2 ||
+        tweet.text.split(' ').length > 5
+      ).sort((a: TweetWithMetrics, b: TweetWithMetrics) => 
+        (b.public_metrics.like_count + b.public_metrics.retweet_count) - 
+        (a.public_metrics.like_count + a.public_metrics.retweet_count)
+      );
+
+      allTweets = allTweets.concat(relevantTweets);
+
+      // ✅ Check if there's a next_token for pagination
+      nextToken = response?.output?.data?.meta?.next_token || undefined;
+
     } while (nextToken); // Continue looping until there's no next_token
+
   } catch (error) {
-    console.error('Error fetching tweets:', error);
+    console.error('🚨 Error fetching tweets:', error);
     throw new Error('Error fetching tweets.');
   }
 
+  console.log(`🔍 Fetched ${allTweets.length} relevant tweets`);
   return allTweets;
 }
+
 
 // Webhook to receive chatId from the user (Telegram-specific)
 app.post('/receive-chat-id', (req, res) => {
