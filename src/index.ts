@@ -140,10 +140,10 @@ async function fetchTweetsWithPagination(passed_workspaceId: string): Promise<Tw
   try {
     do {
       const params: Record<string, any> = {
-        query: 'bitcoin',
+        query: 'bitcoin (price OR analysis OR update OR bullish OR bearish) lang:en -is:retweet -has:links min_faves:10 min_retweets:5 min_replies:2',
         start_time: formattedTime,
-        "tweet.fields": "created_at",
-        max_results: 100 // Max number of tweets per request
+        "tweet.fields": "created_at,text,author_id,public_metrics",
+        max_results: 100
       };
 
       if (nextToken) {
