@@ -15,7 +15,7 @@ const agent = new Agent({
 
 // Define environment variables
 const TELEGRAM_WEBHOOK = process.env.TELEGRAM_WEBHOOK
-let chatId: null = null // Variable to store the chatId for sending Telegram messages
+// Variable to store the chatId for sending Telegram messages
 
 if (!TELEGRAM_WEBHOOK) {
   throw new Error('Missing environment variables: TELEGRAM_WEBHOOK')
@@ -26,7 +26,7 @@ agent.addCapability({
   description:
     'Fetches recent Bitcoin tweets from the last hour and performs sentiment analysis, expected output: Sentiment scores and sentiment analysis based on them',
   schema: z.object({}),
-  async run({ args, action }) {
+  async run({ action }) {
     try {
       // Fetch the last hour's tweets about Bitcoin
       const workspaceId = action?.workspace.id?.toString()
@@ -105,7 +105,7 @@ async function analyzeAndCategorizeSentiment(tweets: Tweet[]): Promise<string> {
     (positiveCount * 100 + neutralCount * 50 + negativeCount * 0) / tweets.length;
   
   // Calculate the average sentiment score (optional: consider weighted average)
-  const averageSentimentScore = tweets.length ? totalSentimentScore / tweets.length : 0;
+  // const averageSentimentScore = tweets.length ? totalSentimentScore / tweets.length : 0;
   
   // Calculate percentages for each category
   const totalTweets: number = tweets.length;
@@ -178,12 +178,12 @@ async function analyzeAndCategorizeSentiment(tweets: Tweet[]): Promise<string> {
   
 }
 
-interface TweetResponse {
-  data: Tweet[]
-  meta: {
-    next_token?: string
-  }
-}
+// interface TweetResponse {
+//   data: Tweet[]
+//   meta: {
+//     next_token?: string
+//   }
+// }
 
 async function fetchTweetsWithPagination(passed_workspaceId: string) {
   console.log('Fetching tweets...');
@@ -276,25 +276,6 @@ async function fetchTweetsWithPagination(passed_workspaceId: string) {
   console.log(`🔍 Fetched ${allTweets.length} relevant tweets`);
   return allTweets;
 }
-
-
-// Webhook to receive chatId from the user (Telegram-specific)
-app.post('/receive-chat-id', (req, res) => {
-  const { chatId: receivedChatId } = req.body
-
-  if (!receivedChatId) {
-    return res.status(400).send('Invalid request: Missing chatId.')
-  }
-
-  // Store the chatId for sending Telegram messages later
-  chatId = receivedChatId
-  res.status(200).json({ success: true, message: 'chatId received and stored.' })
-})
-// Start the Express server
-const PORT = 3000
-app.listen(PORT, () => {
-  console.log(`Sentiment Agent listening on port ${PORT}`)
-})
 
 // Start the OpenServ Agent
 agent.start()
